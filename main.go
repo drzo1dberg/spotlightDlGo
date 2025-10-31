@@ -28,7 +28,7 @@ const (
 func buildAPIURL(country, locale string) (string, error) {
 	u, err := url.Parse("https://fd.api.iris.microsoft.com/v4/api/selection")
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	q := url.Values{
 		"placement": {"88000820"},
@@ -79,11 +79,15 @@ func fetchOnce(client *http.Client, country, locale string) ([]spotImage, error)
 	defer cancel()
 
 	reqURL, err := buildAPIURL(country, locale)
+	if err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Accept", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
