@@ -21,11 +21,26 @@ import (
 
 // description :
 // A minimal Windows Spotlight wallpaper downloader rewritten in Go.
-
 const (
-	defaultAPI = "https://fd.api.iris.microsoft.com/v4/api/selection?&placement=88000820&bcnt=4&country=%s&locale=%s&fmt=json"
-	userAgent  = "spotlightdl-go/1.0"
+	userAgent = "spotlightdl-go/1.0"
 )
+
+func buildAPIURL(country, locale string) (string, error) {
+	u, err := url.Parse("https://fd.api.iris.microsoft.com/v4/api/selection")
+	if err != nil {
+		return "", err
+	}
+	q := url.Values{
+		"placement": {"88000820"},
+		"bcnt":      {"4"},
+		"country":   {country},
+		"locale":    {locale},
+		"fmt":       {"json"},
+	}
+	u.RawQuery = q.Encode()
+	return u.String(), nil
+
+}
 
 type (
 	root struct {
@@ -63,12 +78,16 @@ func fetchOnce(client *http.Client, country, locale string) ([]spotImage, error)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	reqURL := fmt.Sprintf(defaultAPI, country, locale)
+	reqURL, err := buildAPIURL(country, locale)
+	if err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Accept", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -282,6 +301,7 @@ func main() {
 
 		if newInRound == 0 {
 			emptyRounds++
+			time.Sleep(500 * time.Millisecond)
 		} else {
 			emptyRounds = 0
 		}
@@ -291,4 +311,3 @@ func main() {
 		fmt.Printf("done. new=%d\n", totalNew)
 	}
 }
-
